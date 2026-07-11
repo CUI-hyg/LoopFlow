@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loopkits"
+version = "0.1.0"
+description = "LoopKits — Python 原生的 Loop Engineering 框架：LoopFlow = Loops × WorkFlows + Agents & Services"
+readme = "README.MD"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "LoopKits" }]
+keywords = ["loop-engineering", "ai-agent", "workflow", "automation", "loopflow"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "click>=8.1",
+    "pydantic>=2.0",
+    "rich>=13.0",
+    "gitpython>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.scripts]
+loopflow = "loopkits.cli.main:cli"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["loopkits*"]
+exclude = ["references*"]

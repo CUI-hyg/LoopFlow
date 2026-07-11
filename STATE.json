@@ -1,0 +1,15 @@
+{
+  "iteration": 5,
+  "goal": "持久化测试",
+  "todos": [
+    "任务A",
+    "任务B"
+  ],
+  "completed": [
+    "已完成项"
+  ],
+  "history": [],
+  "paused": false,
+  "last_run": "",
+  "notes": "测试备注"
+}
