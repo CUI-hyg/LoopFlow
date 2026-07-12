@@ -1,4 +1,4 @@
-# LoopKits 框架 Spec
+# LoopFlow 框架 Spec
 
 > LoopFlow = Loops × WorkFlows + Agents & Services
 
@@ -7,18 +7,18 @@
 当前 AI Agent 与人的协作仍停留在「手动挡」：人逐个喂任务、逐个确认、逐个验证，Agent 无法自主循环工作。
 Loop Engineering 已被行业验证为「提示词之后的下一层抽象」（cobusgreyling/loop-engineering 7K★、obra/superpowers 150K★、karpathy/autoresearch 66K★），但现有项目要么是 JS/TS 实现、要么仅面向单一编码场景，缺少一个 **Python 原生、同时覆盖开发与办公、可嵌入也可独立运行** 的实用框架。
 
-LoopKits 填补这个空白：把「设计循环让 Agent 自动跑」的理念落地为一套 Python 工具链，开发者用 Code 模式管代码循环，办公职员用 Work 模式管任务循环，并通过 CLI 把开放 API 服务接入 LoopFlow。
+LoopFlow 填补这个空白：把「设计循环让 Agent 自动跑」的理念落地为一套 Python 工具链，开发者用 Code 模式管代码循环，办公职员用 Work 模式管任务循环，并通过 CLI 把开放 API 服务接入 LoopFlow。
 
 ## What Changes
 
-### 新增：LoopKits Python 框架（全新项目）
+### 新增：LoopFlow Python 框架（全新项目）
 
 - **核心公式实现**：`LoopFlow = Loops × WorkFlows + Agents & Services`，提供 Loop / WorkFlow / Agent / Service 四类一等原语。
 - **双模式架构**：
   - **Code 模式**（面向开发者）：循环模式库 + 工具链 + Skill 形态，可嵌入 Claude Code / Codex。
   - **Work 模式**（面向办公职员）：Comments + Corrector 机制，自动处理大量任务，是 Code 模式的高级封装。
 - **三种分发形态**：
-  1. Python 库（`import loopkits`）
+  1. Python 库（`import loopflow`）
   2. Skill 形态（生成 `SKILL.md` 嵌入 Claude Code / Codex）
   3. 独立 CLI（`loopflow` 命令，集成开放 API 服务）
 - **L1/L2/L3 渐进信任**：L1 只报告、L2 辅助修复（人工监控）、L3 全自动无人值守。
@@ -31,7 +31,7 @@ LoopKits 填补这个空白：把「设计循环让 Agent 自动跑」的理念�
 
 ## Impact
 
-- **Affected code**：全新项目，无既有代码冲突。主代码位于 `/workspace/loopkits/`。
+- **Affected code**：全新项目，无既有代码冲突。主代码位于 `/workspace/loopflow/`。
 - **参考仓库**：`/workspace/references/{loop-engineering,superpowers,autoresearch}` 仅作设计参考，不修改。
 - **依赖**：Python 3.10+，`click`（CLI）、`pydantic`（数据模型）、`rich`（终端输出）、`gitpython`（worktree）。
 - **嵌入目标**：Claude Code（通过 `.claude/skills/`）、Codex（通过 plugin manifest）。
@@ -158,4 +158,4 @@ LoopKits 填补这个空白：把「设计循环让 Agent 自动跑」的理念�
 | `obra/superpowers` | Markdown | SKILL.md 自动触发机制、brainstorm→plan→execute 流水线、SDD（子代理驱动开发）、TDD 强制、跨平台嵌入（Claude Code/Codex/Cursor） |
 | `karpathy/autoresearch` | Python | 三文件架构（prepare/train/program）、ratchet loop（棘轮循环：只保留改进）、标量指标驱动、git 作为记忆、`program.md` 作为人机接口、NEVER STOP 自治 |
 
-LoopKits 的 Python 实现综合三者：以 autoresearch 的 Python 风格为骨架，吸收 loop-engineering 的模式库与评分体系，采用 superpowers 的 Skill 形态与触发机制。
+LoopFlow 的 Python 实现综合三者：以 autoresearch 的 Python 风格为骨架，吸收 loop-engineering 的模式库与评分体系，采用 superpowers 的 Skill 形态与触发机制。

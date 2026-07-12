@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from loopkits.core.loop import Loop, TrustLevel
-from loopkits.patterns.registry import PATTERN_REGISTRY, get, list_patterns
+from loopflow.core.loop import Loop, TrustLevel
+from loopflow.patterns.registry import PATTERN_REGISTRY, get, list_patterns
 
 # 所有内置模式名（从注册表动态获取，保证与注册表一致）
 _PATTERN_NAMES = [m.name for m in list_patterns()]

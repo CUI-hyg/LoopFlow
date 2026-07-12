@@ -1,6 +1,6 @@
 # Work 模式示例
 
-LoopKits 的 **Work 模式**面向办公职员，在 Code 模式之上提供 Comments 轨迹与
+LoopFlow 的 **Work 模式**面向办公职员，在 Code 模式之上提供 Comments 轨迹与
 Corrector 门控机制，让自动化任务可审计、可暂停、可恢复。
 
 ## Comments + Corrector 机制
@@ -62,8 +62,8 @@ python examples/work-mode/email_triage_demo.py
 ## 核心 API
 
 ```python
-from loopkits.work import WorkOrchestrator, WorkConfig, Task, WorkCorrector
-from loopkits.work.templates import weekly_report_template, email_triage_template
+from loopflow.work import WorkOrchestrator, WorkConfig, Task, WorkCorrector
+from loopflow.work.templates import weekly_report_template, email_triage_template
 
 # 加载模板
 config = weekly_report_template()
@@ -93,7 +93,7 @@ print(orch.to_report())
 ## 自定义 Corrector 阈值
 
 ```python
-from loopkits.work.corrector import WorkCorrector
+from loopflow.work.corrector import WorkCorrector
 
 # 默认阈值 0.7；提高阈值可让 Corrector 更严格
 config = email_triage_template()

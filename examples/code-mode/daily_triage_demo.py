@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Daily Triage 演示 — 用 LoopKits 运行 daily-triage 模式。
+"""Daily Triage 演示 — 用 LoopFlow 运行 daily-triage 模式。
 
-本示例展示如何用 LoopKits 的 Code 模式 API 运行「每日分诊」循环模式。
+本示例展示如何用 LoopFlow 的 Code 模式 API 运行「每日分诊」循环模式。
 
 - 使用 dry_run 模式（无需任何外部凭证）
 - 通过模式注册表获取 DailyTriage 类
@@ -16,13 +16,13 @@
 
 from __future__ import annotations
 
-from loopkits.patterns.registry import get, list_patterns
+from loopflow.patterns.registry import get, list_patterns
 
 
 def main() -> None:
     """演示 daily-triage 模式的 dry_run 流程。"""
     print("=" * 70)
-    print("LoopKits Code 模式示例 — Daily Triage（每日分诊）")
+    print("LoopFlow Code 模式示例 — Daily Triage（每日分诊）")
     print("=" * 70)
 
     # ------------------------------------------------------------------ #
@@ -99,7 +99,7 @@ def main() -> None:
 
     print("\n✓ Daily Triage 演示完成。")
     print("  实际使用时，注入 GitHubService 即可扫描真实 Issue/PR：")
-    print("    from loopkits.services import GitHubService")
+    print("    from loopflow.services import GitHubService")
     print('    svc = GitHubService(token="ghp_xxx")')
     print('    pattern = DailyTriage(service_provider={"github": svc})')
 

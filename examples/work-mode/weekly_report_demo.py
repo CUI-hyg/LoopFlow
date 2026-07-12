@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Weekly Report 演示 — 用 LoopKits Work 模式生成项目周报。
+"""Weekly Report 演示 — 用 LoopFlow Work 模式生成项目周报。
 
-本示例展示如何用 LoopKits 的 Work 模式 API 批量生成周报。
+本示例展示如何用 LoopFlow 的 Work 模式 API 批量生成周报。
 
 - 使用 weekly_report_template() 模板
 - 通过 WorkOrchestrator 批量执行多个周报任务
@@ -17,15 +17,15 @@
 
 from __future__ import annotations
 
-from loopkits.work.orchestrator import WorkOrchestrator
-from loopkits.work.queue import Task
-from loopkits.work.templates import weekly_report_template
+from loopflow.work.orchestrator import WorkOrchestrator
+from loopflow.work.queue import Task
+from loopflow.work.templates import weekly_report_template
 
 
 def main() -> None:
     """演示 Work 模式周报生成的批量执行流程。"""
     print("=" * 70)
-    print("LoopKits Work 模式示例 — Weekly Report（项目周报生成）")
+    print("LoopFlow Work 模式示例 — Weekly Report（项目周报生成）")
     print("=" * 70)
 
     # ------------------------------------------------------------------ #
@@ -138,7 +138,7 @@ def main() -> None:
 
     print("\n✓ Weekly Report 演示完成。")
     print("  实际使用时，注入 GitHub 与邮件服务即可处理真实项目：")
-    print("    from loopkits.services import GitHubService, EmailService")
+    print("    from loopflow.services import GitHubService, EmailService")
     print('    config.services = {"github": GitHubService(token=...),')
     print('                        "email": EmailService(...)}')
 

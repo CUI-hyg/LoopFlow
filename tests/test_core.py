@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from loopkits.core.agent import (
+from loopflow.core.agent import (
     AgentRole,
     CheckResult,
     Checker,
@@ -17,18 +17,18 @@ from loopkits.core.agent import (
     Maker,
     Verifier,
 )
-from loopkits.core.budget import Budget
-from loopkits.core.constraints import Constraints
-from loopkits.core.loop import Loop, LoopConfig, TrustLevel
-from loopkits.core.memory import Memory
-from loopkits.core.safety import (
+from loopflow.core.budget import Budget
+from loopflow.core.constraints import Constraints
+from loopflow.core.loop import Loop, LoopConfig, TrustLevel
+from loopflow.core.memory import Memory
+from loopflow.core.safety import (
     SafetyError,
     SafetyGate,
     SafetyLevel,
     TrustUpgrade,
 )
-from loopkits.core.state import State
-from loopkits.core.workflow import RetryPolicy, Step, WorkFlow
+from loopflow.core.state import State
+from loopflow.core.workflow import RetryPolicy, Step, WorkFlow
 
 
 # ====================================================================== #
@@ -192,7 +192,7 @@ def test_agent_roles():
     # Verifier
     verifier = Verifier(name="v1")
     vresult = verifier.execute({"result": "目标已达成", "goal": "达成"})
-    from loopkits.core.agent import VerifyResult
+    from loopflow.core.agent import VerifyResult
     assert isinstance(vresult, VerifyResult)
     assert vresult.achieved is True
 

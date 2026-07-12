@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Email Triage 演示 — 用 LoopKits Work 模式分类邮件。
+"""Email Triage 演示 — 用 LoopFlow Work 模式分类邮件。
 
 本示例展示 Work 模式的 Corrector 机制：低置信度时暂停任务而非盲目执行。
 
@@ -18,16 +18,16 @@
 
 from __future__ import annotations
 
-from loopkits.work.orchestrator import WorkOrchestrator
-from loopkits.work.queue import Task
-from loopkits.work.corrector import WorkCorrector
-from loopkits.work.templates import email_triage_template
+from loopflow.work.orchestrator import WorkOrchestrator
+from loopflow.work.queue import Task
+from loopflow.work.corrector import WorkCorrector
+from loopflow.work.templates import email_triage_template
 
 
 def main() -> None:
     """演示 Work 模式邮件分类与 Corrector 暂停机制。"""
     print("=" * 70)
-    print("LoopKits Work 模式示例 — Email Triage（邮件分类）")
+    print("LoopFlow Work 模式示例 — Email Triage（邮件分类）")
     print("=" * 70)
 
     # ------------------------------------------------------------------ #
