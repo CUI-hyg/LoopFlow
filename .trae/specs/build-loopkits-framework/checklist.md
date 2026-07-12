@@ -1,0 +1,31 @@
+- [x] LoopFlow 核心四原语（Loop/WorkFlow/Agent/Service）已实现且可组合
+- [x] Loop 能携带状态与记忆跨迭代，支持停止条件
+- [x] WorkFlow 支持有向图步骤串联与重试/回退
+- [x] Agent 四角色（Maker/Checker/Corrector/Verifier）已实现
+- [x] Code 模式 7 个循环模式全部实现并可 dry-run
+- [x] CLI 工具链命令齐全（init/run/audit/cost/state/worktree/skill export）
+- [x] `loopflow init` 能生成完整脚手架（LOOP.md/STATE.md/budget/constraints/skill）
+- [x] `loopflow audit` 输出 0-100 Loop Ready 评分与改进建议
+- [x] Work 模式 Comments 机制能记录结构化决策轨迹
+- [x] Work 模式 Corrector 能在置信度低于阈值时暂停并请求人工确认
+- [x] Work 模式单任务暂停不阻塞队列中其他任务
+- [x] Work 模式能封装 Code 循环 + WorkFlow + 服务为高级编排
+- [x] 至少 5 个服务连接器实现（GitHub/Slack/邮件/IMA/通用HTTP）
+- [x] `loopflow service add/list/health` 命令可用，凭证安全存储不落明文
+- [x] Skill 导出能生成符合 Claude Code 规范的 SKILL.md 并自动触发
+- [x] Skill 导出支持 Codex plugin manifest 形态
+- [x] 路径保护生效（.env/secrets/credentials/基础设施配置不可被自动编辑）
+- [x] 预算耗尽自动降级（80% 切 L1）与 loop-pause-all 杀停开关生效
+- [x] 无人值守代码变更强制在 git worktree 中进行（SafetyGate.require_worktree）
+- [x] L1/L2/L3 信任分级配置正确，新模式默认 L1
+- [x] constraints 文件规则对 Agent 具约束力
+- [x] examples/code-mode 至少 2 个可运行 demo
+- [x] examples/work-mode 至少 2 个可运行 demo
+- [x] 根 README.MD 已更新（介绍/快速开始/模式列表/LoopFlow 公式）
+- [x] LOOP.md 与 loop-constraints.md 模板已提供（init 内置渲染）
+- [x] 核心原语单元测试通过（13 项）
+- [x] 模式库冒烟测试通过（29 项参数化）
+- [x] CLI 集成测试通过（7 项）
+- [x] Work 模式 Corrector 流程测试通过（14 项）
+- [x] 参考仓库（references/）保持独立未污染
+- [x] IMA 知识库服务连接器复用 ima-skill 凭证（从环境变量读取）
