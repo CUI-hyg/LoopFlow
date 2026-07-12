@@ -123,6 +123,9 @@ class EmailService(Service):
         """
         if not self._has_credentials():
             return False
+        # 过滤 CRLF / NUL，防止邮件头注入
+        to = _sanitize_header(to)
+        subject = _sanitize_header(subject)
         msg = MIMEText(body, "plain", "utf-8")
         msg["Subject"] = subject
         msg["From"] = self._username
@@ -180,6 +183,13 @@ class EmailService(Service):
 # ---------------------------------------------------------------------- #
 # 邮件解析辅助
 # ---------------------------------------------------------------------- #
+def _sanitize_header(value: str) -> str:
+    """移除邮件头中的 CR / LF / NUL，防止 CRLF 头部注入。"""
+    if not value:
+        return value
+    return value.replace("\r", "").replace("\n", "").replace("\x00", "")
+
+
 def _decode_str(value: str) -> str:
     """解码邮件头部字段（可能含编码段）。"""
     if not value:

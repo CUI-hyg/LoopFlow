@@ -118,7 +118,7 @@ def _calculate_cost(
 
 @click.command()
 @click.argument("pattern_name")
-@click.option("--runs", type=int, default=1, help="运行次数（默认 1）")
+@click.option("--runs", type=click.IntRange(min=1), default=1, help="运行次数（默认 1）")
 @click.option(
     "--model",
     type=click.Choice(list(_MODEL_PRICING.keys())),

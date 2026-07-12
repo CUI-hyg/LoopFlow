@@ -189,9 +189,15 @@ class Pattern(ABC):
         子类的 :meth:`build_loop` 可直接调用此方法，或自行构造以获得更细粒度控制。
         """
         config = self._make_loop_config(config_overrides)
-        # 默认 check：单次执行后即视为达成（多数 triage 模式为单趟扫描）
+        # 默认 check：根据 stop_condition 判断
+        # 无 stop_condition 时返回 False，让循环跑满 max_iterations（fail-safe）
         if check_fn is None:
-            check_fn = lambda state, result: True  # noqa: E731
+            def _default_check(state: State, result: Any) -> bool:
+                if not config.stop_condition:
+                    return False
+                # 有 stop_condition 时，单次执行后即视为达成
+                return True
+            check_fn = _default_check
         return Loop(
             config=config,
             execute_fn=self._execute,

@@ -9,7 +9,10 @@ State 是 Loop 跨迭代记忆的「外部存储」：每次迭代结束后将�
 
 from __future__ import annotations
 
+import hashlib
+import hmac
 import json
+import os
 import time
 from pathlib import Path
 
@@ -79,27 +82,64 @@ class State(BaseModel):
         """持久化到 STATE.md（人可读）与 STATE.json（结构化）。
 
         ``path`` 可指向 ``STATE.md`` 或 ``STATE.json``，两者都会基于同一
-        stem 写出。
+        stem 写出。若设置了环境变量 ``LOOPKITS_STATE_SECRET``，会额外写入
+        HMAC-SHA256 签名文件 ``.sig`` 用于完整性校验，并将文件权限设为
+        ``0o600``（仅所有者可读写）。
         """
         p = Path(path)
         md_path = p.with_suffix(".md")
         json_path = p.with_suffix(".json")
         md_path.parent.mkdir(parents=True, exist_ok=True)
         md_path.write_text(self.to_markdown(), encoding="utf-8")
-        json_path.write_text(
-            self.model_dump_json(indent=2), encoding="utf-8"
-        )
+        json_content = self.model_dump_json(indent=2)
+        json_path.write_text(json_content, encoding="utf-8")
+        # 设置结构化状态文件权限为仅所有者可读写
+        try:
+            os.chmod(json_path, 0o600)
+        except OSError:
+            pass
+        # 完整性签名（若配置了 secret）
+        secret = os.environ.get("LOOPKITS_STATE_SECRET")
+        if secret:
+            sig = hmac.new(
+                secret.encode("utf-8"),
+                json_content.encode("utf-8"),
+                hashlib.sha256,
+            ).hexdigest()
+            sig_path = json_path.with_suffix(".sig")
+            sig_path.write_text(sig, encoding="utf-8")
+            try:
+                os.chmod(sig_path, 0o600)
+            except OSError:
+                pass
 
     @classmethod
     def load(cls, path: str | Path) -> "State":
         """从文件加载状态：优先读 JSON（结构化），不存在则从 STATE.md 解析。
 
-        若文件不存在则返回空 State。
+        若文件不存在则返回空 State。若设置了环境变量
+        ``LOOPKITS_STATE_SECRET``，会校验 ``.sig`` 签名文件，签名缺失或不
+        匹配时抛 :class:`ValueError`，防止状态文件被篡改。
         """
         p = Path(path)
         json_path = p.with_suffix(".json")
         if json_path.exists():
-            return cls.model_validate_json(json_path.read_text(encoding="utf-8"))
+            json_content = json_path.read_text(encoding="utf-8")
+            # 完整性校验（若配置了 secret）
+            secret = os.environ.get("LOOPKITS_STATE_SECRET")
+            if secret:
+                sig_path = json_path.with_suffix(".sig")
+                if not sig_path.exists():
+                    raise ValueError("状态文件签名缺失，可能被篡改")
+                expected = hmac.new(
+                    secret.encode("utf-8"),
+                    json_content.encode("utf-8"),
+                    hashlib.sha256,
+                ).hexdigest()
+                actual = sig_path.read_text(encoding="utf-8").strip()
+                if not hmac.compare_digest(expected, actual):
+                    raise ValueError("状态文件签名校验失败，可能被篡改")
+            return cls.model_validate_json(json_content)
         md_path = p.with_suffix(".md")
         if md_path.exists():
             return cls.from_markdown(md_path.read_text(encoding="utf-8"))

@@ -79,19 +79,23 @@ class DependencySweeper(Pattern):
             update_type = u.get("type", "patch")
             name = u.get("name", "unknown")
             by_type[update_type] = by_type.get(update_type, 0) + 1
+            # risk 缺失时默认 "high"（fail-closed，避免未知风险被自动升级）
+            risk = u.get("risk", "high")
             entry = {
                 "name": name,
                 "current": u.get("current", ""),
                 "target": u.get("target", ""),
                 "type": update_type,
                 "cve": u.get("cve"),
-                "risk": u.get("risk", "low"),
+                "risk": risk,
                 "changelog": u.get("changelog", ""),
             }
-            # denylist 包 → 需人工
-            if name.lower() in _DENYLIST:
+            # denylist 匹配时对 name 做标准化（lower + 取末段 + 下划线转短横线），
+            # 防止大小写变体或 scoped 包名绕过
+            normalized = name.lower().split("/")[-1].replace("_", "-")
+            if normalized in _DENYLIST:
                 denylisted.append(entry)
-            elif update_type == "patch" and u.get("risk", "low") != "high":
+            elif update_type == "patch" and risk != "high":
                 patch_safe.append(entry)
             else:
                 needs_evaluation.append(entry)

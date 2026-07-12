@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from typing import Any
 
 from loopkits import __version__ as _loopkits_version
@@ -25,6 +26,9 @@ __all__ = ["CodexTarget"]
 
 # Codex plugin manifest 文件名
 _MANIFEST_FILENAME = "manifest.json"
+
+# 安全的 skill 名称模式：字母数字开头，仅含字母数字、点、下划线、短横线
+_SAFE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
 
 
 class CodexTarget:
@@ -80,7 +84,17 @@ class CodexTarget:
         Returns:
             写入的 SKILL.md 绝对路径。
         """
+        # 安全校验：name 只允许安全字符，防止路径遍历
+        if not name or not _SAFE_NAME_PATTERN.match(name):
+            raise ValueError(f"非法的 skill 名称：{name!r}")
         skill_dir = os.path.join(output_path, name)
+        # 二次校验：realpath 必须在 output_path 内，防止符号链接等绕过
+        real_skill_dir = os.path.realpath(skill_dir)
+        real_output = os.path.realpath(output_path)
+        if real_skill_dir != real_output and not real_skill_dir.startswith(
+            real_output + os.sep
+        ):
+            raise ValueError(f"skill 路径越界（不在 output_path 内）：{skill_dir}")
         os.makedirs(skill_dir, exist_ok=True)
         skill_file = os.path.join(skill_dir, "SKILL.md")
         with open(skill_file, "w", encoding="utf-8") as fh:

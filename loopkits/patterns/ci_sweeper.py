@@ -174,10 +174,20 @@ class CISweeper(Pattern):
         overrides.setdefault("stop_condition", "所有可修复的 CI 失败已处理")
 
         def _check(state: State, result: Any) -> bool:
-            # 无更多可修复项即达成
-            if isinstance(result, dict):
-                return not result.get("escalations") or len(result.get("fixes", [])) >= 0
-            return True
+            # 检查所有 fixes 的 verifier 是否为 "passed"；无 fixes 时检查无剩余可修复项
+            if not isinstance(result, dict):
+                return True
+            fixes = result.get("fixes", [])
+            if fixes:
+                return all(f.get("verifier") == "passed" for f in fixes)
+            # 无 fixes：检查是否还有可修复项未处理
+            analyses = result.get("analyses", [])
+            remaining = [
+                a for a in analyses
+                if a.get("fixable")
+                and a.get("category") not in ("infrastructure", "security")
+            ]
+            return not remaining
 
         return self._make_loop(overrides, check_fn=_check)
 

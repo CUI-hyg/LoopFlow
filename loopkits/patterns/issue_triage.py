@@ -93,7 +93,7 @@ class IssueTriage(Pattern):
             or "security" in suggested_labels
             or category in ("auth", "payments", "security")
         )
-        reply = self._generate_reply(title, category, priority, needs_human)
+        reply = self._generate_reply(title, category, priority, needs_human, suggested_labels)
 
         return {
             "issue_id": issue_id,
@@ -174,7 +174,12 @@ class IssueTriage(Pattern):
         return "general"
 
     def _generate_reply(
-        self, title: str, category: str, priority: str, needs_human: bool
+        self,
+        title: str,
+        category: str,
+        priority: str,
+        needs_human: bool,
+        suggested_labels: list[str] | None = None,
     ) -> str:
         """生成初步回复。"""
         lines = [
@@ -190,7 +195,7 @@ class IssueTriage(Pattern):
         else:
             lines.append("")
             lines.append("我们将在后续迭代中处理此 Issue，请关注更新。")
-        if priority == "P3" and "needs-repro" in (title, ""):
+        if priority == "P3" and suggested_labels and "needs-repro" in suggested_labels:
             lines.append("")
             lines.append("💡 为加快处理，请提供复现步骤与环境信息。")
         return "\n".join(lines)

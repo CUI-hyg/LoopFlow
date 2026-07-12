@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import click
@@ -21,6 +22,20 @@ from rich.table import Table
 __all__ = ["worktree"]
 
 console: Console = Console()
+
+# 安全的标识符模式：字母数字开头，仅含字母数字、点、下划线、短横线
+_SAFE_NAME_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
+
+
+def _validate_safe_name(value: str, field_name: str) -> None:
+    """校验标识符只含安全字符，防止路径遍历与分支名注入。"""
+    if not value or not _SAFE_NAME_PATTERN.match(value):
+        click.echo(
+            f"{field_name} 含非法字符或为空（仅允许字母数字开头，"
+            "可含字母数字、点、下划线、短横线）：{value!r}",
+            err=True,
+        )
+        raise SystemExit(1)
 
 
 def _get_repo():
@@ -64,6 +79,10 @@ def worktree_create(run_id: str, pattern: str, base_branch: str | None) -> None:
     分支命名：``loop/<pattern>/<run-id>``
     worktree 路径：``../<repo-name>-worktrees/<pattern>-<run-id>``
     """
+    # 安全校验：防止 pattern/run_id 含路径遍历字符或分支名注入
+    _validate_safe_name(pattern, "pattern")
+    _validate_safe_name(run_id, "run-id")
+
     repo = _get_repo()
 
     branch_name = f"loop/{pattern}/{run_id}"
@@ -72,6 +91,16 @@ def worktree_create(run_id: str, pattern: str, base_branch: str | None) -> None:
     # worktree 放在仓库同级的目录下，避免污染主工作区
     worktree_root = repo_root.parent / f"{repo_name}-worktrees"
     worktree_path = worktree_root / f"{pattern}-{run_id}"
+
+    # 二次校验：resolve 后的路径必须仍在 worktree_root 内，防止符号链接等绕过
+    try:
+        worktree_path.relative_to(worktree_root.resolve())
+    except ValueError:
+        click.echo(
+            f"worktree 路径越界（不在 {worktree_root} 内）：{worktree_path}",
+            err=True,
+        )
+        raise SystemExit(1)
 
     # 检查分支是否已存在
     existing_branches = [b.name for b in repo.branches]
@@ -187,6 +216,44 @@ def worktree_remove(path: str, force: bool) -> None:
         click.echo("不能删除主仓库工作区。", err=True)
         raise SystemExit(1)
 
+    # 安全校验：仅允许删除 loop/ 创建的已注册 worktree，防止误删任意目录
+    branch_name = ""
+    is_registered = False
+    try:
+        for block in repo.git.worktree("list", "--porcelain").split("\n\n"):
+            block = block.strip()
+            if not block:
+                continue
+            block_path = ""
+            block_branch = ""
+            for line in block.splitlines():
+                if line.startswith("worktree "):
+                    block_path = line[len("worktree "):]
+                elif line.startswith("branch "):
+                    block_branch = line[len("branch "):]
+            if block_path and Path(block_path).resolve() == wt_path:
+                is_registered = True
+                branch_name = block_branch
+                break
+    except Exception as exc:
+        click.echo(f"获取 worktree 列表失败：{exc}", err=True)
+        raise SystemExit(1)
+
+    if not is_registered:
+        click.echo(
+            f"路径不是已注册的 git worktree，拒绝删除：{wt_path}",
+            err=True,
+        )
+        raise SystemExit(1)
+
+    # 仅允许删除 loop/ 开头分支关联的 worktree
+    if not branch_name or not branch_name.startswith("loop/"):
+        click.echo(
+            f"worktree 关联分支 {branch_name!r} 非 loop/ 创建，拒绝删除。",
+            err=True,
+        )
+        raise SystemExit(1)
+
     args = ["worktree", "remove", str(wt_path)]
     if force:
         args.append("--force")
@@ -198,15 +265,7 @@ def worktree_remove(path: str, force: bool) -> None:
 
     console.print(f"[green]✓ 已删除 worktree：{wt_path}[/green]")
 
-    # 尝试删除关联的 loop/ 分支（如果已无 worktree 引用）
-    # 查找是否有同名分支可清理
-    branch_name = ""
-    try:
-        for line in repo.git.worktree("list", "--porcelain").splitlines():
-            if line.startswith("branch "):
-                pass  # 仅用于检测
-    except Exception:
-        pass
+    # 提示清理关联的 loop/ 分支（如已无 worktree 引用）
     if branch_name:
         console.print(f"[dim]关联分支 {branch_name} 如不再需要，请手动 git branch -D 删除。[/dim]")
 

@@ -104,10 +104,8 @@ class DailyTriage(Pattern):
             else:
                 watch_list.append(entry)
 
-        # P1 也算 high_priority（单文件 bugfix 可尝试 L2 修复）
-        for entry in by_priority.get("P1", []):
-            if entry.get("scope") == "single-file" and entry.get("kind") == "bugfix":
-                high_priority.insert(0, entry)
+        # P1 已在 needs_human 中（需人介入），不再加入 high_priority
+        # 仅 P2 single-file bugfix 可作为 L2 自动修复候选（已在上方 elif 分支加入）
 
         return {
             "by_priority": {k: len(v) for k, v in by_priority.items()},

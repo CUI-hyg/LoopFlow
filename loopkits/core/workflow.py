@@ -21,6 +21,9 @@ from pydantic import BaseModel, Field
 
 __all__ = ["RetryPolicy", "Step", "WorkFlow", "StepResult", "WorkflowResult"]
 
+# 指数退避上限（秒），防止 2^N 无限放大导致长时间阻塞/DoS
+MAX_BACKOFF = 300
+
 
 class RetryPolicy(BaseModel):
     """重试策略。
@@ -102,8 +105,8 @@ class Step:
             except Exception as exc:  # noqa: BLE001 — 工作流需捕获步骤异常
                 last_error = f"{type(exc).__name__}: {exc}"
                 if attempt < max_attempts - 1:
-                    # 指数退避
-                    wait = self.retry_policy.backoff * (2 ** attempt)
+                    # 指数退避（封顶 MAX_BACKOFF，避免 2^N 过大导致 DoS）
+                    wait = min(self.retry_policy.backoff * (2 ** attempt), MAX_BACKOFF)
                     if wait > 0:
                         time.sleep(wait)
         # 重试耗尽，尝试回退

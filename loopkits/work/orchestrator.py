@@ -230,10 +230,11 @@ class WorkOrchestrator:
 
         # 提取结果与置信度
         result = wf_result.context
+        # confidence 缺失时默认 0.0（fail-closed，避免未知结果被高置信度放行）
         confidence = float(
             wf_result.context.get(
                 "confidence",
-                1.0 if wf_result.success else 0.0,
+                0.0,
             )
         )
 
@@ -248,7 +249,7 @@ class WorkOrchestrator:
 
         # Corrector 检查
         action = self.config.corrector.check(task, result, confidence)
-        self._handle_corrector_action(task, action)
+        self._handle_corrector_action(task, action, result=result, confidence=confidence)
 
         # 构造 TaskResult
         task_result = TaskResult(
@@ -389,7 +390,14 @@ class WorkOrchestrator:
     # ------------------------------------------------------------------ #
     # 内部辅助
     # ------------------------------------------------------------------ #
-    def _handle_corrector_action(self, task: Task, action: CorrectorAction) -> None:
+    def _handle_corrector_action(
+        self,
+        task: Task,
+        action: CorrectorAction,
+        *,
+        result: Any = None,
+        confidence: float = 1.0,
+    ) -> None:
         """根据 Corrector 动作更新任务状态并记录注释。"""
         if action.type == ActionType.PAUSE:
             # 暂停：记录 QUESTION + NEXT_STEP
@@ -435,12 +443,12 @@ class WorkOrchestrator:
             )
 
         else:  # PROCEED
-            self.queue.mark_done(task.id, result=task.result, confidence=1.0)
+            self.queue.mark_done(task.id, result=result, confidence=confidence)
             self.comments.add(
                 CommentType.INFO,
                 f"任务完成：{action.reason}",
                 task_id=task.id,
-                confidence=1.0,
+                confidence=confidence,
             )
 
     @staticmethod

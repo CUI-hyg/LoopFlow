@@ -112,6 +112,10 @@ class GitHubService(Service):
         """
         if not self._token or not self._repo:
             return []
+        # 校验 state 防止查询参数注入，仅允许合法枚举值
+        if state not in ("open", "closed", "all"):
+            state = "open"
+        state = urllib.parse.quote(state, safe="")
         try:
             result = self._request(
                 "GET", f"/repos/{self._repo}/issues?state={state}"
@@ -175,6 +179,10 @@ class GitHubService(Service):
         """
         if not self._token or not self._repo:
             return []
+        # 校验 state 防止查询参数注入，仅允许合法枚举值
+        if state not in ("open", "closed", "all"):
+            state = "open"
+        state = urllib.parse.quote(state, safe="")
         try:
             result = self._request(
                 "GET", f"/repos/{self._repo}/pulls?state={state}"

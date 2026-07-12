@@ -122,14 +122,22 @@ class Memory(BaseModel):
     # git 持久化后端
     # ------------------------------------------------------------------ #
     def _git_commit(self, message: str) -> bool:
-        """在 git 仓库中提交当前改动（保留改进）。"""
-        return _run_git(self.git_repo_path, ["add", "-A"]) and _run_git(
+        """在 git 仓库中提交当前改动（保留改进）。
+
+        用 ``--update`` 仅暂存已跟踪文件的修改，避免 ``git add -A`` 把
+        敏感新文件一并提交。
+        """
+        return _run_git(self.git_repo_path, ["add", "--update"]) and _run_git(
             self.git_repo_path, ["commit", "-m", message, "--allow-empty"]
         )
 
     def _git_reset(self) -> bool:
-        """回滚到上一个提交（丢弃退步）。"""
-        return _run_git(self.git_repo_path, ["reset", "--hard", "HEAD"])
+        """回滚到上一个提交（丢弃退步）。
+
+        用 ``--soft`` 仅回退提交，不丢弃工作区变更（避免 ``--hard`` 销毁
+        未提交的工作）。
+        """
+        return _run_git(self.git_repo_path, ["reset", "--soft", "HEAD~1"])
 
     # ------------------------------------------------------------------ #
     # 文件持久化

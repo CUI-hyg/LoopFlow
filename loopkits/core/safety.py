@@ -19,6 +19,7 @@ Loop / WorkFlow / CLI 各层调用。
 
 from __future__ import annotations
 
+import subprocess
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -98,6 +99,9 @@ class SafetyGate:
         无人值守（``is_unattended=True``）且涉及代码变更的路径不在 worktree
         中时，抛 :class:`SafetyError`。有人值守时直接放行（人工监控）。
 
+        当调用方声明 ``in_worktree=True`` 时，会用 ``git rev-parse
+        --is-inside-work-tree`` 真正验证，不盲目信任传入参数，避免绕过。
+
         Args:
             path: 待变更的路径（用于错误信息）。
             is_unattended: 是否无人值守（L3 全自动）。
@@ -106,10 +110,18 @@ class SafetyGate:
         Raises:
             SafetyError: 无人值守代码变更未在 worktree 中。
         """
-        if is_unattended and not in_worktree:
+        if not is_unattended:
+            return
+        if not in_worktree:
             raise SafetyError(
                 f"无人值守代码变更必须在 worktree 中进行：{path}。"
                 "请先通过 `loopflow worktree create` 创建隔离 worktree。"
+            )
+        # 调用方声明已在 worktree 中：用 git 真正验证，不盲目信任
+        if not _is_inside_git_worktree():
+            raise SafetyError(
+                f"无人值守代码变更必须在 worktree 中进行：{path}。"
+                "调用方声明 in_worktree=True，但 git 检测未处于工作树中。"
             )
 
     def check_pause(self, state: State) -> bool:
@@ -148,11 +160,13 @@ class SafetyGate:
             level = self.check_budget(budget)
             if level == SafetyLevel.STOPPED:
                 return SafetyLevel.STOPPED
-        if path is not None and constraints is not None:
-            if not self.check_path(path, constraints):
+        if path is not None:
+            # constraints 为 None 时使用默认约束，而非跳过路径检查
+            cs = constraints if constraints is not None else Constraints()
+            if not self.check_path(path, cs):
                 raise SafetyError(
                     f"路径 '{path}' 命中约束黑名单，禁止编辑。"
-                    f"违规：{constraints.violations_list()}"
+                    f"违规：{cs.violations_list()}"
                 )
         if budget is not None and budget.is_degraded():
             return SafetyLevel.DEGRADED
@@ -197,8 +211,6 @@ class TrustUpgrade:
         self,
         current: TrustLevel,
         target: TrustLevel,
-        success_count: int | None = None,
-        failure_count: int | None = None,
     ) -> bool:
         """判断是否允许从 current 升级到 target。
 
@@ -208,11 +220,11 @@ class TrustUpgrade:
         2. current 级别的连续成功次数 >= :attr:`min_success`。
         3. current 级别无失败记录。
 
+        仅使用内部维护的计数，不接受外部传入参数，避免绕过。
+
         Args:
             current: 当前信任级别。
             target: 目标信任级别。
-            success_count: 成功次数；为 None 则使用内部记录。
-            failure_count: 失败次数；为 None 则使用内部记录。
 
         Returns:
             True 表示允许升级。
@@ -220,9 +232,11 @@ class TrustUpgrade:
         # 必须是相邻级别
         if self._UPGRADE_PATH.get(current) != target:
             return False
-        sc = success_count if success_count is not None else self._success_counts[current]
-        fc = failure_count if failure_count is not None else self._failure_counts[current]
-        return sc >= self.min_success and fc == 0
+        # 仅使用内部计数，不接受外部参数，避免绕过
+        return (
+            self._success_counts[current] >= self.min_success
+            and self._failure_counts[current] == 0
+        )
 
     def upgrade_path(self, from_level: TrustLevel) -> list[TrustLevel]:
         """返回从 from_level 开始的升级路径列表。
@@ -248,6 +262,8 @@ class TrustUpgrade:
             self._success_counts[level] += 1
         else:
             self._failure_counts[level] += 1
+            # 失败时重置当前级别的连续成功计数，要求重新累积
+            self._success_counts[level] = 0
 
     def suggest_level(self) -> TrustLevel:
         """基于历史运行记录建议当前应使用的信任级别。
@@ -289,3 +305,21 @@ class TrustUpgrade:
             f"<TrustUpgrade current={self._current_level.value} "
             f"min_success={self.min_success}>"
         )
+
+
+def _is_inside_git_worktree() -> bool:
+    """用 ``git rev-parse --is-inside-work-tree`` 真正检测当前是否在 git 工作树中。
+
+    供 :meth:`SafetyGate.require_worktree` 验证调用方声明，避免盲目信任
+    传入的 ``in_worktree`` 参数。git 不可用或非仓库时返回 False。
+    """
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "true"
+    except (subprocess.SubprocessError, OSError):
+        return False

@@ -12,7 +12,9 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
+import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, ClassVar
@@ -189,7 +191,8 @@ class ServiceRegistry:
     def save(self) -> None:
         """将所有服务配置保存到 ``~/.loopkits/services.json``。
 
-        凭证字段经 Base64 编码后存储，不落明文。
+        凭证字段经 Base64 编码后存储，不落明文。文件权限设为 0o600（仅
+        所有者可读写），防止其他用户读取凭证。
         """
         SERVICES_FILE.parent.mkdir(parents=True, exist_ok=True)
         data: list[dict[str, Any]] = []
@@ -202,11 +205,17 @@ class ServiceRegistry:
         SERVICES_FILE.write_text(
             json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8"
         )
+        # 设置文件权限为仅所有者可读写，防止其他用户读取凭证
+        try:
+            os.chmod(SERVICES_FILE, 0o600)
+        except OSError:
+            pass
 
     def load(self) -> None:
         """从 ``~/.loopkits/services.json`` 加载服务配置。
 
-        文件不存在或解析失败时静默返回（保持空注册表）。
+        文件不存在或解析失败时静默返回（保持空注册表）。对非 dict 结构、
+        非法凭证编码等异常均安全跳过，不抛异常。
         """
         self._loaded = True
         if not SERVICES_FILE.exists():
@@ -215,21 +224,42 @@ class ServiceRegistry:
             payload = json.loads(SERVICES_FILE.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             return
-        for item in payload.get("services", []):
-            cred_raw = item.get("credentials", {})
-            creds = _decode_credentials(cred_raw) if isinstance(cred_raw, str) else cred_raw
-            item["credentials"] = creds
-            config = ServiceConfig(**item)
-            service = _build_service(config)
-            if service is not None:
-                self._services[config.name] = service
+        if not isinstance(payload, dict):
+            return
+        services = payload.get("services", [])
+        if not isinstance(services, list):
+            return
+        for item in services:
+            if not isinstance(item, dict):
+                continue
+            try:
+                cred_raw = item.get("credentials", {})
+                if isinstance(cred_raw, str):
+                    creds = _decode_credentials(cred_raw)
+                elif isinstance(cred_raw, dict):
+                    creds = cred_raw
+                else:
+                    creds = {}
+                item["credentials"] = creds
+                config = ServiceConfig(**item)
+                service = _build_service(config)
+                if service is not None:
+                    self._services[config.name] = service
+            except (binascii.Error, TypeError, ValueError):
+                # 凭证解码失败或配置非法时跳过该条目，不影响其他服务
+                continue
 
 
 # ---------------------------------------------------------------------- #
 # 凭证编码 / 解码（Base64 混淆，防止明文落盘）
 # ---------------------------------------------------------------------- #
 def _encode_credentials(creds: dict[str, Any]) -> str:
-    """将凭证字典编码为 Base64 字符串。"""
+    """将凭证字典编码为 Base64 字符串。
+
+    注意：Base64 仅是编码（可逆），并非加密。本方法用于避免明文落盘，
+    不能抵御有文件读权限的攻击者。生产环境建议使用 ``keyring`` 等系统
+    凭证管理工具存储敏感凭证。
+    """
     raw = json.dumps(creds, ensure_ascii=False).encode("utf-8")
     return _CRED_ENCODED_PREFIX + base64.b64encode(raw).decode("ascii")
 

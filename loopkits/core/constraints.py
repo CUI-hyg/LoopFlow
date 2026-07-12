@@ -235,39 +235,58 @@ def _extract_paths(rule: str) -> list[str]:
 
 
 def _match_path(target: str, pattern: str) -> bool:
-    """路径匹配：支持 fnmatch 与 ``**/`` 前缀的子串匹配。"""
-    # 标准化
-    target = target.lstrip("./")
-    pattern = pattern.lstrip("./")
-    # fnmatch 精确匹配
-    if fnmatch.fnmatch(target, pattern):
-        return True
-    # **/xxx/** 形式：子串匹配
+    """路径匹配：段级匹配，确保子目录中的敏感文件也被拦截。
+
+    所有 pattern 统一按段级匹配：去除 ``**/`` 前缀与 ``/**`` 后缀后，
+    在 target 的任意层级查找匹配的段或段序列。这样 ``.env`` 既能匹配
+    根目录的 ``.env``，也能匹配 ``config/.env``，避免子目录绕过。
+    """
+    # 标准化：用字符串前缀剥离（非字符级 lstrip），避免 "./.env"→"env"
+    target = _normalize_relpath(target)
+    pattern = _normalize_relpath(pattern)
+    if not target or not pattern:
+        return False
+    target_parts = [p for p in target.split("/") if p]
+    # 去除 **/ 前缀（统一按任意层级匹配）
     if pattern.startswith("**/"):
-        core = pattern[3:]
-        if core.endswith("/**"):
-            seg = core[:-3]
-            if seg in target.split("/"):
-                return True
-        elif core.endswith("*"):
-            seg = core.rstrip("*")
-            for part in target.split("/"):
-                if part.startswith(seg) or fnmatch.fnmatch(part, core):
-                    return True
-        else:
-            for part in target.split("/"):
-                if part == core or fnmatch.fnmatch(part, core):
-                    return True
-        return False
-    # .env.* 形式：前缀匹配
-    if pattern.endswith(".*"):
-        prefix = pattern[:-2]
-        for part in target.split("/"):
-            if part == prefix or part.startswith(prefix + "."):
-                return True
-        return False
-    # 直接子串（如 auth/）
+        pattern = pattern[3:]
+    # 去除 /** 后缀（目录递归 → 按目录段匹配）
+    if pattern.endswith("/**"):
+        pattern = pattern[:-3]
+    # 去除末尾单独的 / （目录本身）
     if pattern.endswith("/"):
-        if pattern in target + "/":
+        pattern = pattern[:-1]
+    if not pattern:
+        return True
+    core_parts = [p for p in pattern.split("/") if p]
+    if not core_parts:
+        return True
+    if len(core_parts) == 1:
+        # 单段：任意 target 段匹配（fnmatch 支持通配，如 .env / .env.* / *_key*）
+        seg = core_parts[0]
+        for part in target_parts:
+            if part == seg or fnmatch.fnmatch(part, seg):
+                return True
+        return False
+    # 多段：target 中存在与 core_parts 连续匹配的段序列（如 k8s/production）
+    return _contains_segment_sequence(target_parts, core_parts)
+
+
+def _normalize_relpath(s: str) -> str:
+    """标准化相对路径：统一反斜杠，去除前导 ``./``（字符串级，非字符级）。"""
+    s = s.replace("\\", "/")
+    # 循环去除前导 ./ （避免 lstrip("./") 把 "./.env" 误剥成 "env"）
+    while s.startswith("./"):
+        s = s[2:]
+    return s
+
+
+def _contains_segment_sequence(target_parts: list[str], core_parts: list[str]) -> bool:
+    """target 中是否包含与 core_parts 连续匹配的段序列（支持 fnmatch 通配）。"""
+    n, m = len(target_parts), len(core_parts)
+    if m > n or m == 0:
+        return False
+    for i in range(n - m + 1):
+        if all(fnmatch.fnmatch(target_parts[i + j], core_parts[j]) for j in range(m)):
             return True
     return False

@@ -91,8 +91,12 @@ def _weekly_fetch_commits(ctx: dict[str, Any]) -> list[dict[str, Any]]:
             commits = github.list_issues(state="all")  # 简化：复用 list_issues
             if commits:
                 return commits
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # 服务异常时记录警告并降低置信度，避免静默回退到 mock 数据
+            ctx["confidence"] = 0.3
+            ctx.setdefault("_warnings", []).append(
+                f"github 服务调用失败，回退到 mock 数据：{type(exc).__name__}: {exc}"
+            )
     return list(_MOCK_WEEKLY_COMMITS)
 
 
@@ -258,8 +262,12 @@ def _email_read_unread(ctx: dict[str, Any]) -> list[dict[str, Any]]:
             emails = email_svc.list_unread(limit=20)
             if emails:
                 return emails
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # 服务异常时记录警告并降低置信度，避免静默回退到 mock 数据
+            ctx["confidence"] = 0.3
+            ctx.setdefault("_warnings", []).append(
+                f"email 服务调用失败，回退到 mock 数据：{type(exc).__name__}: {exc}"
+            )
     return list(_MOCK_EMAILS)
 
 
@@ -412,8 +420,12 @@ def _schedule_read(ctx: dict[str, Any]) -> list[dict[str, Any]]:
             events = http_svc.get("/calendar/events")
             if events:
                 return events
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as exc:  # noqa: BLE001
+            # 服务异常时记录警告并降低置信度，避免静默回退到 mock 数据
+            ctx["confidence"] = 0.3
+            ctx.setdefault("_warnings", []).append(
+                f"http 服务调用失败，回退到 mock 数据：{type(exc).__name__}: {exc}"
+            )
     return list(_MOCK_SCHEDULE)
 
 

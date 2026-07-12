@@ -16,7 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 __all__ = ["Budget"]
 
@@ -35,6 +35,30 @@ class Budget(BaseModel):
     spent: int = 0
     threshold: float = 0.8
     degraded: bool = False
+
+    @field_validator("daily_cap")
+    @classmethod
+    def _validate_daily_cap(cls, v: int) -> int:
+        """daily_cap 必须为正数，防止 0/负值绕过 should_stop 门控。"""
+        if v <= 0:
+            raise ValueError("daily_cap 必须大于 0")
+        return v
+
+    @field_validator("spent")
+    @classmethod
+    def _validate_spent(cls, v: int) -> int:
+        """spent 不能为负，防止负数绕过预算耗尽检查。"""
+        if v < 0:
+            raise ValueError("spent 不能为负数")
+        return v
+
+    @field_validator("threshold")
+    @classmethod
+    def _validate_threshold(cls, v: float) -> float:
+        """threshold 必须在 (0, 1] 范围内，防止 >1 永不降级或 <=0 永远降级。"""
+        if not (0 < v <= 1):
+            raise ValueError("threshold 必须在 (0, 1] 范围内")
+        return v
 
     # ------------------------------------------------------------------ #
     # 记录与查询
@@ -117,6 +141,14 @@ class Budget(BaseModel):
             fields["threshold"] = float(data["threshold"])
         if "degraded" in data:
             fields["degraded"] = _to_bool(data["degraded"])
+        # 范围校验：防止负数或越界值绕过预算门控
+        if fields.get("daily_cap", 100_000) <= 0:
+            raise ValueError("daily_cap 必须大于 0")
+        if fields.get("spent", 0) < 0:
+            raise ValueError("spent 不能为负数")
+        _threshold = fields.get("threshold", 0.8)
+        if not (0 < _threshold <= 1):
+            raise ValueError("threshold 必须在 (0, 1] 范围内")
         return cls(**fields)
 
 

@@ -131,6 +131,11 @@ class Loop:
 
             # 执行 → 检查 → 记录
             step_output = self.execute_step(self.state)
+            # 从 step_output 提取 token 用量并记录到预算（避免门控空转）
+            if isinstance(step_output, dict):
+                _usage = step_output.get("token_usage")
+                if isinstance(_usage, int) and _usage > 0:
+                    self.budget.record(_usage)
             goal_reached = self.check_result(self.state, step_output)
             self.memory.record(
                 iteration=iteration,

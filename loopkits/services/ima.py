@@ -104,17 +104,17 @@ class IMAService(Service):
             raise RuntimeError(f"IMA 脚本不存在：{self._script_path}")
 
         raw_body = json.dumps(body or {}, ensure_ascii=False)
-        # 通过 options 传入凭证（避免依赖环境变量大小写）
-        options = json.dumps(
-            {"clientId": self._client_id, "apiKey": self._api_key},
-            ensure_ascii=False,
-        )
+        # 通过环境变量传递凭证，避免命令行参数被 ps 等进程查看工具泄露
+        env = dict(os.environ)
+        env["IMA_OPENAPI_CLIENTID"] = self._client_id
+        env["IMA_OPENAPI_APIKEY"] = self._api_key
         try:
             result = subprocess.run(
-                ["node", str(self._script_path), api_path, raw_body, options],
+                ["node", str(self._script_path), api_path, raw_body],
                 capture_output=True,
                 text=True,
                 timeout=60,
+                env=env,
             )
         except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
             raise RuntimeError(f"调用 ima_api.cjs 失败：{exc}") from exc

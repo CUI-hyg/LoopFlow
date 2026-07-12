@@ -247,7 +247,7 @@ pattern workflows when your human partner has explicitly told you to.
         # YAML front-matter（参考 superpowers 的格式）
         front_matter = (
             "---\n"
-            f"name: {config.name}\n"
+            f'name: "{_escape_yaml(config.name)}"\n'
             f'description: "{_escape_yaml(config.description)}"\n'
             "---\n\n"
         )
@@ -313,5 +313,13 @@ pattern workflows when your human partner has explicitly told you to.
 
 
 def _escape_yaml(value: str) -> str:
-    """转义 YAML 字符串中的特殊字符（双引号、反斜杠）。"""
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+    """转义 YAML 字符串中的特殊字符（双引号、反斜杠、换行符）。
+
+    换行符必须转义，否则可通过换行注入新的 YAML 键与恶意指令。
+    """
+    return (
+        value.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )

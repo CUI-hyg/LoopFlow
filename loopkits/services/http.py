@@ -6,7 +6,9 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
+import socket
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -15,6 +17,47 @@ from typing import Any
 from loopkits.services.base import Service, ServiceConfig
 
 __all__ = ["HTTPService"]
+
+# 内网/保留地址网段黑名单（防止 SSRF 打内网与云元数据 169.254.169.254）
+_PRIVATE_NETWORKS = [
+    ipaddress.ip_network("169.254.0.0/16"),  # 链路本地（含云元数据）
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),  # IPv6 唯一本地
+]
+
+
+def _is_private_ip(ip_str: str) -> bool:
+    """判断 IP 是否属于内网/保留地址。无法解析按危险处理。"""
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return True
+    return any(ip in net for net in _PRIVATE_NETWORKS)
+
+
+def _assert_safe_host(host: str) -> None:
+    """校验主机名解析后的所有 IP 均不在内网黑名单中。"""
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror as exc:
+        raise urllib.error.URLError(f"主机名解析失败：{host}（{exc}）") from exc
+    for _family, _type, _proto, _canon, sockaddr in infos:
+        ip = sockaddr[0]
+        if _is_private_ip(ip):
+            raise urllib.error.URLError(
+                f"SSRF 防护：主机 {host} 解析到内网地址 {ip}，已拦截"
+            )
+
+
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """禁用自动重定向，防止 SSRF 通过 30x 跳转到内网。"""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D401
+        raise urllib.error.HTTPError(newurl, code, msg, headers, fp)
 
 
 class HTTPService(Service):
@@ -92,6 +135,11 @@ class HTTPService(Service):
             query = urllib.parse.urlencode(params)
             url = f"{url}?{query}"
 
+        # SSRF 防护：解析主机名并校验其 IP 不在内网黑名单中
+        host = urllib.parse.urlsplit(url).hostname
+        if host:
+            _assert_safe_host(host)
+
         data = None
         headers = self._build_headers()
         if body is not None:
@@ -99,7 +147,9 @@ class HTTPService(Service):
             headers["Content-Type"] = "application/json"
 
         req = urllib.request.Request(url, data=data, method=method, headers=headers)
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        # 禁用自动重定向，防止通过 30x 跳转到内网地址
+        opener = urllib.request.build_opener(_NoRedirectHandler)
+        with opener.open(req, timeout=30) as resp:
             raw = resp.read().decode("utf-8")
             if not raw:
                 return {}
