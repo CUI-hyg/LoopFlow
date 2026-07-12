@@ -10,12 +10,12 @@ from typing import Any
 
 import pytest
 
-from loopkits.core.workflow import Step, WorkFlow
-from loopkits.work.comments import CommentTrail, CommentType
-from loopkits.work.corrector import ActionType, WorkCorrector
-from loopkits.work.orchestrator import WorkOrchestrator
-from loopkits.work.queue import Task, TaskQueue, TaskStatus
-from loopkits.work.templates import (
+from loopflow.core.workflow import Step, WorkFlow
+from loopflow.work.comments import CommentTrail, CommentType
+from loopflow.work.corrector import ActionType, WorkCorrector
+from loopflow.work.orchestrator import WorkOrchestrator
+from loopflow.work.queue import Task, TaskQueue, TaskStatus
+from loopflow.work.templates import (
     email_triage_template,
     schedule_organize_template,
     weekly_report_template,
@@ -180,7 +180,7 @@ def test_orchestrator_batch():
         steps=[Step("process", step_action, outputs="processed")],
     )
 
-    from loopkits.work.orchestrator import WorkConfig
+    from loopflow.work.orchestrator import WorkConfig
 
     config = WorkConfig(
         name="batch-test",
@@ -220,7 +220,7 @@ def test_orchestrator_paused_tasks():
         steps=[Step("process", low_conf_step, outputs="processed")],
     )
 
-    from loopkits.work.orchestrator import WorkConfig
+    from loopflow.work.orchestrator import WorkConfig
 
     config = WorkConfig(
         name="pause-test",
@@ -256,7 +256,7 @@ def test_orchestrator_resume_cancel():
         return {"result": "uncertain"}
 
     wf = WorkFlow(name="cancel-wf", steps=[Step("process", low_conf_step)])
-    from loopkits.work.orchestrator import WorkConfig
+    from loopflow.work.orchestrator import WorkConfig
 
     config = WorkConfig(
         name="cancel-test",

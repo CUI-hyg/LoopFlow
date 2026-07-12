@@ -12,13 +12,13 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from loopkits.cli.audit import audit, run_audit
-from loopkits.cli.init import init
-from loopkits.cli.run import run as run_cmd
-from loopkits.cli.service import service
-from loopkits.cli.skill import skill
-from loopkits.cli.state import state as state_cmd
-from loopkits.core.state import State
+from loopflow.cli.audit import audit, run_audit
+from loopflow.cli.init import init
+from loopflow.cli.run import run as run_cmd
+from loopflow.cli.service import service
+from loopflow.cli.skill import skill
+from loopflow.cli.state import state as state_cmd
+from loopflow.core.state import State
 
 
 @pytest.fixture
@@ -100,7 +100,7 @@ def test_run_dry_run(runner):
 
 def test_run_dry_run_all_patterns(runner):
     """所有模式 dry-run 均成功。"""
-    from loopkits.patterns.registry import list_patterns
+    from loopflow.patterns.registry import list_patterns
 
     for meta in list_patterns():
         result = runner.invoke(run_cmd, [meta.name, "--dry-run"])

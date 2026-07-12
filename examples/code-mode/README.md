@@ -1,6 +1,6 @@
 # Code 模式示例
 
-LoopKits 的 **Code 模式**面向开发者，提供 7 个可复用的 Loop Engineering 循环模式。
+LoopFlow 的 **Code 模式**面向开发者，提供 7 个可复用的 Loop Engineering 循环模式。
 每个模式都是 `Pattern` 子类，通过 `service_provider` 抽象外部服务依赖，
 支持 `dry_run()` 无凭证模拟运行。
 
@@ -45,8 +45,8 @@ python examples/code-mode/ci_sweeper_demo.py
 ## 核心 API
 
 ```python
-from loopkits.patterns.registry import get, list_patterns
-from loopkits.core.loop import TrustLevel
+from loopflow.patterns.registry import get, list_patterns
+from loopflow.core.loop import TrustLevel
 
 # 列出所有模式元数据
 for meta in list_patterns():
@@ -66,7 +66,7 @@ result = pattern.dry_run()
 print(result["report"])
 
 # 真实运行（注入服务）
-from loopkits.services import GitHubService
+from loopflow.services import GitHubService
 svc = GitHubService(token="ghp_xxx")
 pattern = DailyTriage(service_provider={"github": svc})
 loop = pattern.build_loop()

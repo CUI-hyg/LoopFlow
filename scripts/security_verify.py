@@ -40,7 +40,7 @@ def section(title: str) -> None:
 # --------------------------------------------------------------------------- #
 def test_path_blacklist_subdir() -> None:
     section("Critical: 路径黑名单子目录绕过")
-    from loopkits.core.constraints import Constraints
+    from loopflow.core.constraints import Constraints
 
     c = Constraints()
     blocked = []
@@ -59,7 +59,7 @@ def test_path_blacklist_subdir() -> None:
 # --------------------------------------------------------------------------- #
 def test_ssrf_internal() -> None:
     section("Critical: SSRF 内网拦截")
-    from loopkits.services.http import HTTPService
+    from loopflow.services.http import HTTPService
 
     svc = HTTPService(base_url="http://example.com")
     attacked = 0
@@ -84,7 +84,7 @@ def test_ssrf_internal() -> None:
 # --------------------------------------------------------------------------- #
 def test_worktree_path_traversal() -> None:
     section("Critical: worktree 路径遍历")
-    from loopkits.cli.worktree import _validate_safe_name, _SAFE_NAME_PATTERN
+    from loopflow.cli.worktree import _validate_safe_name, _SAFE_NAME_PATTERN
 
     blocked = 0
     for evil in ["../../../tmp/pwned", "..\\..\\win", "abc/def", "a b c", ""]:
@@ -116,7 +116,7 @@ def test_worktree_path_traversal() -> None:
 # --------------------------------------------------------------------------- #
 def test_negative_budget() -> None:
     section("High: 预算负数绕过（构造函数+load）")
-    from loopkits.core.budget import Budget
+    from loopflow.core.budget import Budget
 
     blocked = 0
     # 构造函数：daily_cap <= 0 应被拒绝
@@ -161,7 +161,7 @@ def test_negative_budget() -> None:
 # --------------------------------------------------------------------------- #
 def test_email_header_injection() -> None:
     section("High: 邮件头注入")
-    from loopkits.services.email import _sanitize_header
+    from loopflow.services.email import _sanitize_header
 
     cases = ["evil\r\nBcc: victim@x.com", "normal", "a\x00b", "x\rY\nZ"]
     ok_count = 0
@@ -180,7 +180,7 @@ def test_email_header_injection() -> None:
 # --------------------------------------------------------------------------- #
 def test_state_hmac() -> None:
     section("Medium: state HMAC 签名")
-    from loopkits.core.state import State
+    from loopflow.core.state import State
 
     with tempfile.TemporaryDirectory() as td:
         os.environ["LOOPKITS_STATE_SECRET"] = "test-secret-key-123"
@@ -212,9 +212,9 @@ def test_state_hmac() -> None:
 # --------------------------------------------------------------------------- #
 def test_credential_file_perms() -> None:
     section("High: 凭证文件权限 0o600")
-    from loopkits.services import base as base_mod
-    from loopkits.services.base import ServiceConfig, ServiceRegistry
-    from loopkits.services.http import HTTPService
+    from loopflow.services import base as base_mod
+    from loopflow.services.base import ServiceConfig, ServiceRegistry
+    from loopflow.services.http import HTTPService
 
     # 用临时文件替换 SERVICES_FILE（单例需 monkey-patch）
     with tempfile.TemporaryDirectory() as td:
@@ -247,7 +247,7 @@ def test_credential_file_perms() -> None:
 def test_ci_sweeper_check() -> None:
     section("High: ci_sweeper check_fn 逻辑")
     import inspect
-    from loopkits.patterns.ci_sweeper import CISweeper
+    from loopflow.patterns.ci_sweeper import CISweeper
 
     p = CISweeper()
     # build_loop 内部定义 _check 闭包，检查其源码不含 `>= 0` 永真判断
@@ -264,7 +264,7 @@ def test_ci_sweeper_check() -> None:
 def test_dependency_sweeper_fail_closed() -> None:
     section("Medium: dependency_sweeper fail-closed")
     import inspect
-    from loopkits.patterns.dependency_sweeper import DependencySweeper
+    from loopflow.patterns.dependency_sweeper import DependencySweeper
 
     p = DependencySweeper()
     src = inspect.getsource(p._classify_updates)
@@ -281,7 +281,7 @@ def test_dependency_sweeper_fail_closed() -> None:
 def test_ima_env_passing() -> None:
     section("High: IMA 凭证 env 传递（非命令行）")
     import inspect
-    from loopkits.services import ima as ima_mod
+    from loopflow.services import ima as ima_mod
 
     src = inspect.getsource(ima_mod)
     has_env = "env=" in src or "IMA_OPENAPI_CLIENTID" in src
@@ -297,7 +297,7 @@ def test_ima_env_passing() -> None:
 def test_daily_triage_no_p1_autofix() -> None:
     section("Medium: daily_triage 不自动修复 P1")
     import inspect
-    from loopkits.patterns.daily_triage import DailyTriage
+    from loopflow.patterns.daily_triage import DailyTriage
 
     p = DailyTriage()
     src = inspect.getsource(type(p))
@@ -321,7 +321,7 @@ def test_daily_triage_no_p1_autofix() -> None:
 def test_workflow_backoff_cap() -> None:
     section("Medium: workflow 退避上限")
     import inspect
-    from loopkits.core import workflow as wf_mod
+    from loopflow.core import workflow as wf_mod
 
     src = inspect.getsource(wf_mod)
     if "MAX_BACKOFF" in src:
@@ -336,7 +336,7 @@ def test_workflow_backoff_cap() -> None:
 def test_skill_yaml_injection() -> None:
     section("Medium: skill generator YAML 注入")
     import inspect
-    from loopkits.skill import generator as gen_mod
+    from loopflow.skill import generator as gen_mod
 
     src = inspect.getsource(gen_mod)
     if "_escape_yaml" in src:
@@ -351,7 +351,7 @@ def test_skill_yaml_injection() -> None:
 def test_base_pattern_default_check() -> None:
     section("Low: base pattern 默认 check 返回 False")
     import inspect
-    from loopkits.patterns import base as base_mod
+    from loopflow.patterns import base as base_mod
 
     src = inspect.getsource(base_mod)
     if "return False" in src:
@@ -366,7 +366,7 @@ def test_base_pattern_default_check() -> None:
 def test_github_state_validation() -> None:
     section("Medium: github state 参数校验")
     import inspect
-    from loopkits.services import github as gh_mod
+    from loopflow.services import github as gh_mod
 
     src = inspect.getsource(gh_mod)
     # state 应限制为 open/closed/all
@@ -382,7 +382,7 @@ def test_github_state_validation() -> None:
 def test_memory_git_safety() -> None:
     section("Medium: memory git 操作安全")
     import inspect
-    from loopkits.core import memory as mem_mod
+    from loopflow.core import memory as mem_mod
 
     src = inspect.getsource(mem_mod)
     has_update = "--update" in src
@@ -400,8 +400,8 @@ def test_memory_git_safety() -> None:
 def test_skill_path_containment() -> None:
     section("Medium: skill 路径 containment 校验")
     import inspect
-    from loopkits.skill import claude_code as cc_mod
-    from loopkits.skill import codex as cx_mod
+    from loopflow.skill import claude_code as cc_mod
+    from loopflow.skill import codex as cx_mod
 
     cc_src = inspect.getsource(cc_mod)
     cx_src = inspect.getsource(cx_mod)
@@ -417,7 +417,7 @@ def test_skill_path_containment() -> None:
 def test_orchestrator_confidence() -> None:
     section("Medium: orchestrator confidence fail-closed")
     import inspect
-    from loopkits.work import orchestrator as orch_mod
+    from loopflow.work import orchestrator as orch_mod
 
     src = inspect.getsource(orch_mod)
     # confidence 默认 0.0 或低值
@@ -433,7 +433,7 @@ def test_orchestrator_confidence() -> None:
 def test_cost_int_range() -> None:
     section("Low: cost --runs IntRange")
     import inspect
-    from loopkits.cli import cost as cost_mod
+    from loopflow.cli import cost as cost_mod
 
     src = inspect.getsource(cost_mod)
     if "IntRange" in src:
@@ -448,7 +448,7 @@ def test_cost_int_range() -> None:
 def test_issue_triage_labels() -> None:
     section("Low: issue_triage 标签判断")
     import inspect
-    from loopkits.patterns import issue_triage as it_mod
+    from loopflow.patterns import issue_triage as it_mod
 
     src = inspect.getsource(it_mod)
     if "suggested_labels" in src:
@@ -463,7 +463,7 @@ def test_issue_triage_labels() -> None:
 def test_templates_no_silent_swallow() -> None:
     section("Medium: templates 不再静默吞异常")
     import inspect
-    from loopkits.work import templates as tpl_mod
+    from loopflow.work import templates as tpl_mod
 
     src = inspect.getsource(tpl_mod)
     # 之前是 `except Exception: pass`，修复后应记录 warning
@@ -479,7 +479,7 @@ def test_templates_no_silent_swallow() -> None:
 def test_safety_worktree_check() -> None:
     section("High: safety require_worktree 真实检查")
     import inspect
-    from loopkits.core import safety as safety_mod
+    from loopflow.core import safety as safety_mod
 
     src = inspect.getsource(safety_mod)
     if "subprocess" in src or "git" in src.lower():
@@ -489,7 +489,7 @@ def test_safety_worktree_check() -> None:
 
 
 def main() -> int:
-    print("\033[1m========== LoopKits 红客渗透验证 ==========\033[0m")
+    print("\033[1m========== LoopFlow 红客渗透验证 ==========\033[0m")
     tests = [
         test_path_blacklist_subdir,
         test_ssrf_internal,

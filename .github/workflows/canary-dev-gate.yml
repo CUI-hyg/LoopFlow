@@ -1,0 +1,156 @@
+# Canary-dev 自动门控：质量检查 + 自动合并
+#
+# 触发条件：针对 Canary-dev 分支的 PR（opened / synchronize / reopened）
+# 流程：
+#   1. 质量检查（quality job）：安装依赖 → pytest → 渗透验证脚本 → 导入冒烟测试
+#   2. 自动合并（auto-merge job）：仅当 quality 通过 且 base == Canary-dev 时执行
+#
+# 安全护栏：
+#   - 仅 Canary-dev 分支触发自动合并（main / master 永不自动合并）
+#   - 质量检查必须全部通过（pytest + security_verify + 导入冒烟）
+#   - 使用 squash merge 保持线性历史
+#   - 合并后自动删除源分支（仅删除 trae/agent-* 前缀的分支，保护用户分支）
+#   - PR 带 `no-auto-merge` 标签时跳过自动合并
+
+name: Canary-dev Gate
+
+on:
+  pull_request:
+    branches: [Canary-dev]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: write       # 合并 PR 所需
+  pull-requests: write  # 合并 PR / 评论所需
+  checks: read          # 读取检查状态
+
+concurrency:
+  group: canary-dev-gate-${{ github.event.pull_request.head.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: 质量检查（tests + security + smoke）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+          pip install pytest
+
+      - name: 单元测试
+        run: |
+          python -m pytest tests/ -v --tb=short
+        env:
+          PYTHONDONTWRITEBYTECODE: 1
+
+      - name: 安全渗透验证
+        run: |
+          python scripts/security_verify.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+
+      - name: 导入冒烟测试
+        run: |
+          python -c "
+          import loopflow
+          from loopflow import Loop, LoopConfig, TrustLevel, WorkFlow, Step, Agent, State, Budget, Constraints, Memory
+          from loopflow.patterns.registry import get
+          from loopflow.work import WorkOrchestrator
+          from loopflow.services import GitHubService, EmailService, HTTPService
+          print('loopflow', loopflow.__version__)
+          print('OK: 全部核心 API 可正常导入')
+          "
+
+      - name: CLI 冒烟测试
+        run: |
+          loopflow --help
+          loopflow --version || true
+          loopflow skill list
+
+  auto-merge:
+    name: 自动合并到 Canary-dev
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # 仅当：1) quality 通过 2) PR 目标分支是 Canary-dev 3) 非 draft 4) 无 no-auto-merge 标签
+    if: |
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.base.ref == 'Canary-dev' &&
+      !contains(github.event.pull_request.labels.*.name, 'no-auto-merge')
+    steps:
+      - name: 校验目标分支
+        run: |
+          echo "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}"
+          if [ "${{ github.event.pull_request.base.ref }}" != "Canary-dev" ]; then
+            echo "::error::目标分支非 Canary-dev，拒绝自动合并"
+            exit 1
+          fi
+          echo "✓ 目标分支校验通过"
+
+      - name: 等待其他检查（如有的话）
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: "质量检查（tests + security + smoke）"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+      - name: Squash 合并 PR
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash
+          commit-message: |
+            ${{ github.event.pull_request.title }}
+
+            PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.head.ref }} → Canary-dev
+            原始提交: ${{ github.event.pull_request.head.sha }}
+
+      - name: 等待合并完成
+        run: |
+          sleep 5
+          echo "✓ 已触发 squash 合并"
+
+      - name: 删除源分支（仅 trae/agent-* 前缀）
+        if: startsWith(github.event.pull_request.head.ref, 'trae/agent-')
+        uses: dawidd6/action-delete-branch@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.event.pull_request.head.ref }}
+
+      - name: 评论合并结果
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body: [
+                '## ✅ Canary-dev 自动门控通过',
+                '',
+                '- 质量检查：**通过**（pytest + security_verify + smoke）',
+                `- 合并方式：**squash**`,
+                `- 目标分支：\`Canary-dev\``,
+                '',
+                'PR 已自动合并到 `Canary-dev` 分支。',
+                startsWith(context.payload.pull_request.head.ref, 'trae/agent-')
+                  ? `- 源分支 \`${context.payload.pull_request.head.ref}\` 已自动删除。`
+                  : `- 源分支 \`${context.payload.pull_request.head.ref}\` 保留（非 agent 分支）。`
+              ].join('\n')
+            });

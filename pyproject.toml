@@ -3,13 +3,13 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "loopkits"
+name = "loopflow"
 version = "0.1.0"
-description = "LoopKits — Python 原生的 Loop Engineering 框架：LoopFlow = Loops × WorkFlows + Agents & Services"
+description = "LoopFlow — Python 原生的 Loop Engineering 框架：LoopFlow = Loops × WorkFlows + Agents & Services"
 readme = "README.MD"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "LoopKits" }]
+authors = [{ name = "LoopFlow" }]
 keywords = ["loop-engineering", "ai-agent", "workflow", "automation", "loopflow"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -32,9 +32,9 @@ dev = [
 ]
 
 [project.scripts]
-loopflow = "loopkits.cli.main:cli"
+loopflow = "loopflow.cli.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["loopkits*"]
+include = ["loopflow*"]
 exclude = ["references*"]

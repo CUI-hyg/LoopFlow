@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""CI Sweeper 演示 — 用 LoopKits 运行 ci-sweeper 模式。
+"""CI Sweeper 演示 — 用 LoopFlow 运行 ci-sweeper 模式。
 
-本示例展示如何用 LoopKits 的 Code 模式 API 运行「CI 失败清扫」循环模式。
+本示例展示如何用 LoopFlow 的 Code 模式 API 运行「CI 失败清扫」循环模式。
 
 - 使用 dry_run 模式（无需任何外部凭证）
 - 展示 L1（仅报告根因分析）与 L2（尝试 worktree 修复）的级别差异
@@ -16,14 +16,14 @@
 
 from __future__ import annotations
 
-from loopkits.core.loop import TrustLevel
-from loopkits.patterns.registry import get
+from loopflow.core.loop import TrustLevel
+from loopflow.patterns.registry import get
 
 
 def main() -> None:
     """演示 ci-sweeper 模式的 dry_run 流程，并对比 L1/L2 级别差异。"""
     print("=" * 70)
-    print("LoopKits Code 模式示例 — CI Sweeper（CI 失败清扫）")
+    print("LoopFlow Code 模式示例 — CI Sweeper（CI 失败清扫）")
     print("=" * 70)
 
     # ------------------------------------------------------------------ #
@@ -111,7 +111,7 @@ def main() -> None:
 
     print("\n✓ CI Sweeper 演示完成。")
     print("  实际使用时，注入 CI 与 git 服务即可处理真实失败：")
-    print("    from loopkits.services import GitHubService")
+    print("    from loopflow.services import GitHubService")
     print('    ci = GitHubService(token="ghp_xxx")  # 复用为 CI 服务')
     print('    pattern = CISweeper(service_provider={"ci": ci, "git": ci}, level=TrustLevel.L2)')
 

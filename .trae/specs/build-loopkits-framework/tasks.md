@@ -3,7 +3,7 @@
 > 实现顺序：核心原语 → Code 模式 → Work 模式 → CLI/服务集成 → Skill 导出 → 文档与示例
 
 - [x] Task 1: 搭建项目骨架与核心原语
-  - [x] SubTask 1.1: 创建 `loopkits/` 包结构（`core/`、`patterns/`、`work/`、`agents/`、`services/`、`cli/`、`skill/`），`pyproject.toml`，最小依赖（click/pydantic/rich/gitpython）
+  - [x] SubTask 1.1: 创建 `loopflow/` 包结构（`core/`、`patterns/`、`work/`、`agents/`、`services/`、`cli/`、`skill/`），`pyproject.toml`，最小依赖（click/pydantic/rich/gitpython）
   - [x] SubTask 1.2: 实现 `core/loop.py` — Loop 原语（目标→执行→检查→改进→重复/停止），携带状态跨迭代，支持停止条件与最大迭代数
   - [x] SubTask 1.3: 实现 `core/workflow.py` — WorkFlow 原语（有向图步骤串联，含重试/回退策略）
   - [x] SubTask 1.4: 实现 `core/agent.py` — Agent 基类与 Maker/Checker/Corrector/Verifier 四角色
@@ -53,7 +53,7 @@
   - [x] SubTask 6.1: 实现 `skill/generator.py` — 从 Pattern 生成 SKILL.md（触发条件、步骤、验证）
   - [x] SubTask 6.2: 实现 Claude Code 嵌入目标（`.claude/skills/` 布局 + 自动触发）
   - [x] SubTask 6.3: 实现 Codex 嵌入目标（plugin manifest）
-  - [x] SubTask 6.4: 创建主 Skill `using-loopkits`（会话启动注入，强制使用相关模式）
+  - [x] SubTask 6.4: 创建主 Skill `using-loopflow`（会话启动注入，强制使用相关模式）
 
 - [x] Task 7: 安全门控与渐进信任
   - [x] SubTask 7.1: 实现路径保护（默认禁止编辑 .env/secrets/credentials/基础设施配置）
